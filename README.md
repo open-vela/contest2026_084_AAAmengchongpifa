@@ -1,36 +1,81 @@
-# contest2026_084_AAAmengchongpifa
+# VelaPet · 会成长的智能手表表宠
 
-👋 欢迎参加 **2026 首届 openvela AI 硬件开发者大赛**！
+## 一、作品简介
 
-这是组委会为你的队伍创建的**专属参赛仓库**（本仓为样例/模板，队伍编号 `084`；你看到的将是你自己的 `contest2026_<编号>_<队伍名>`）。比赛期间，你的全部参赛代码、打包产物与 AI Coding 日志都提交到这里。
+VelaPet 是一个面向 **openvela / Apache NuttX** 智能手表的虚拟宠物应用，已在
+**SiFli SF32LB52-DevKit-LCD** 真机上完整跑通。
 
-> 本仓既是「代码仓」，又内置了一键拉取整套 openvela 工程的 `repo` 清单（manifest）。你只需跟它打交道，**自始至终只动一个文件夹**。
+用户通过日常步数、连续运动和签到来养育自己的表宠：完成任务获得经验、升级解锁新皮肤，
+表宠则用形象和文字给出反馈。**端侧业务核心、LVGL 前端、AI 云端桥接三部分均为本项目实现。**
 
----
+**亮点**
 
-## 一、先读这些官方文档
-
-**通用（所有赛道必读）：**
-
-| 文档                                                                                                                                     | 用途                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [《大赛总览》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)                        | 赛道、流程、评分、资源，建议先通读             |
-| [《参赛代码提交指南》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)           | 仓库获取、提交流程、时间与权限（**以此为准**） |
-| [《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md) | 如何导出 AI 对话日志并提交到 `logs/`           |
-
-**按你的赛道选读（三选一）：**
-
-| 赛道                  | 教程导航                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 快应用 / 手表应用创新 | [快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)                         |
-| AI 硬件产品创新       | [AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)              |
-| 新硬件适配            | [新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md) |
+- **完整成长闭环，真机验证通过** —— 步数 → 完成任务 → 领取经验 → 升级 → 解锁并切换皮肤，
+  整条链路都能在手表上一次走完。
+- **五页 LVGL 前端** —— 主页、任务、AI 聊天、个性化形象、皮肤，含经验条、任务卡、
+  皮肤仓库、轻提示与升级弹窗，触摸交互完整。
+- **真实图片渲染** —— PNG 经 LVGL 解码显示（lodepng + POSIX 文件系统驱动），
+  按容器尺寸等比缩放，读图失败自动回退到手绘形象。
+- **掉电安全的存档** —— 状态以 cJSON 序列化，写入采用「临时文件 → rename」的原子替换，
+  中途断电不会留下半个损坏的存档。
+- **对无电池硬件的适配** —— 本板没有 RTC 备用电池，应用在开机时把时钟播种为固件编译时间，
+  业务侧的日期逻辑也能容忍时钟回跳，不会出现「复位后永远无法签到」。
+- **可测试** —— 业务逻辑与日期逻辑都有主机侧测试，不需要硬件即可回归。
 
 ---
 
-## 二、第一步：拉取完整工程
+## 二、选题方向
 
-用组委会提供的命令一键拉取「openvela 全量源码 + 你的专属仓」：
+**快应用 / 手表应用创新**（作品形态：**应用**，代码放在 `app/`）。
+
+选它的理由是：这是一款完整的**手表端应用**——五页 LVGL 界面 + 一套端侧业务核心
+（成长 / 任务 / 奖励 / 皮肤 / 存档 / 后台服务），有真实的触摸交互与真机验证；
+另外还包含一个可独立运行的 AI 云端桥接（Python 后端 + 设备端 client/bridge）。
+界面用 LVGL 原生实现（而非 `.ux` 快应用框架），所以代码放在 `app/` 而不是 `quickapp/`。
+
+需要说明的是，本作品同时也包含**真实的板级适配**工作（见 `board/`），
+但它服务于上面的手表应用，因此不作为「新硬件适配」赛道参赛。
+
+---
+
+## 三、目录结构
+
+```text
+contest2026_084_AAAmengchongpifa/
+├── app/
+│   └── velapet/              # VelaPet 应用完整源码
+│       ├── src/              #   端侧业务核心、公共 ABI、后台服务、应用入口
+│       ├── ui/               #   LVGL 前端（五页 + 主题/组件，含模拟器 Mock）
+│       ├── backend-ai/       #   Python 后端 + 设备端 AI client/bridge
+│       ├── data/             #   默认宠物数据
+│       ├── tests/            #   主机侧测试（业务逻辑、日期/时钟回跳）
+│       ├── docs/             #   架构交接、数值设定、跨模块联调文档
+│       └── CMakeLists.txt / Kconfig / Make.defs / Makefile
+├── board/
+│   └── velapet_sf32lb52/     # SiFli SF32LB52 板级改动（补丁形式）+ 应用说明
+├── firmware/
+│   └── nuttx.bin             # 已验证的固件镜像，可直接烧录体验，无需先构建
+├── logs/
+│   └── kei-ds/               # AI Coding 日志（按 GitHub 账号 / 日期组织）
+├── skills/                   # 本次开发沉淀的可复用 Skill（Claude Code 格式）
+│   ├── openvela-board-bringup/   #   构建、烧录、串口排障的标准流程 + 烧录脚本
+│   └── nuttx-app-integration/    #   把应用接进 openvela/NuttX 构建体系的正确姿势
+├── AI-开发日志.md            # 开发过程记录（含失败与教训）
+└── contest2026_084_AAAmengchongpifa.xml   # 本仓 manifest（含 linkfile 映射）
+```
+
+**关于 `<linkfile>`**：`app/velapet` 由 manifest 软链到 openvela 编译树的
+`packages/demos/contest2026_084_velapet`，apps 的 CMake 自动发现机制会找到它，
+**不需要改动 `apps` 仓库的任何文件**。
+
+`board/velapet_sf32lb52/` 装的是**针对公共仓库 `vendor/sifli` 的补丁**，不是一个可编译的
+板级目录，因此**有意不配置 linkfile**；应用步骤见该目录下的 `README.md`。
+
+---
+
+## 四、运行方式
+
+### 1. 拉取工程
 
 ```bash
 repo init -u https://github.com/open-vela/contest2026_084_AAAmengchongpifa \
@@ -38,111 +83,114 @@ repo init -u https://github.com/open-vela/contest2026_084_AAAmengchongpifa \
 repo sync -c -j8
 ```
 
-同步后，你的整个仓库位于工作区的 `contest2026_084_AAAmengchongpifa/`，openvela 全量源码在外层（`nuttx/`、`apps/`、`packages/`、`vendor/` 等）。
+同步后本仓位于工作区下的 `contest2026_084_AAAmengchongpifa/`。
 
----
+### 2. 应用板级补丁
 
-## 三、第二步：在哪里写代码
-
-**只在自己的仓目录 `contest2026_084_AAAmengchongpifa/` 里开发。** 不同作品形态放在对应子目录，manifest 会通过 `<linkfile>` 把它们**软链**到 openvela 编译树该在的位置——你不用手动 copy：
-
-| 作品形态 | 你的代码放这里             | 系统自动映射到                                 |
-| -------- | -------------------------- | ---------------------------------------------- |
-| 应用     | `app/hello_app/`           | `packages/demos/contest2026_084_hello_app`     |
-| 快应用   | `quickapp/hello_quickapp/` | `packages/apps/contest2026_084_hello_quickapp` |
-| 板级适配 | `board/contest_board/`     | `vendor/openvela/boards/contest2026_084_board` |
-
-> 用不到的形态目录可以删掉；新增作品时按同样规则加子目录，并在 `contest2026_084_AAAmengchongpifa.xml` 里补一条 `<linkfile>` 映射即可。**生产仓库（packages/nuttx/vendor 等）零改动。**
-
-建议仓库目录约定（便于评委定位）：
-
-```text
-app/ | quickapp/ | board/   # 你的作品代码
-logs/                       # AI Coding 日志（主动导出后提交，格式见 logs/README.md）
-README.md                   # 作品说明（提交前请改成你自己的，见第六节）
-```
-
-> 仓内附带了一个 `.gitignore.example`，给出了**编译产物**等不需要进仓的文件示例。如需启用，`cp .gitignore.example .gitignore` 后按需增删即可。**注意 `logs/` 下最终导出的 AI Coding 日志必须提交，不要忽略。**
->
-> `logs/` 的目录结构与提交格式见 [logs/README.md](logs/README.md)。
-
----
-
-## 四、第三步：编译与运行
-
-编译/运行步骤随作品形态不同而不同，请参考你所在赛道的教程导航：
-
-- 快应用 / 手表应用：[快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)（含模拟器与开发板部署）。
-- AI 硬件产品创新：[AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)（环境搭建、编译烧录、Skill 开发）。
-- 新硬件适配：[新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md)（BSP 移植、最小 NSH 基线）。
-
-子目录已通过 manifest 中的 `<linkfile>` 软链进 openvela 编译树，因此构建在 openvela 工作区**根目录**（即你这个仓的上一级）进行。openvela 使用 `build.sh` 作为统一入口，接收一个 **board config 路径**作为参数：
+应用要跑在 SF32LB52-DevKit-LCD 上，还需要 `vendor/sifli` 的板级改动。
+这些改动按《参赛代码提交指南》应走公共仓 PR，这里以补丁形式随仓提交：
 
 ```bash
-# 进入 openvela 工作区根目录（你的仓的上一级）
-cd ..
-
-# 通用语法：第一个参数是 board config 路径，第二个参数可以是 menuconfig / distclean 等
-./build.sh <board-config-path> [menuconfig|distclean] [-j8]
+cd <工作区>/vendor/sifli
+git am <工作区>/contest2026_084_AAAmengchongpifa/board/velapet_sf32lb52/0001-*.patch
+git am <工作区>/contest2026_084_AAAmengchongpifa/board/velapet_sf32lb52/0002-*.patch
+git am <工作区>/contest2026_084_AAAmengchongpifa/board/velapet_sf32lb52/0003-*.patch
 ```
 
-> 具体的 board config 路径、目标产物、模拟器/真机部署方式请以你所在赛道的教程导航为准。本仓 `app/` `quickapp/` `board/` 三个示例骨架对应的 Kconfig 选项可通过 `menuconfig` 启用。
+补丁基于该仓库 `9c079ca`（即 `repo sync` 后的默认状态）。若基线漂移导致冲突，
+补丁很小，可逐个文件手工对照。三个补丁分别解决：**使能应用与显示/文件系统依赖**、
+**NOR 写校验的诊断输出**、**无 RTC 电池时的时钟播种**。
+
+### 3. 编译
+
+构建必须在 Linux / WSL 下进行（Windows 侧没有工具链）：
+
+```bash
+cd <工作区>
+source build/envsetup.sh          # 必需：否则 arm-none-eabi-gcc 不在 PATH
+
+cmake -B cmake_out/sf32lb52_devkit_lcd -S "$PWD/nuttx" -GNinja \
+  -DBOARD_CONFIG=../vendor/sifli/boards/sf32lb52/sf32lb52_devkit_lcd/configs/nsh \
+  -DEXTRA_FLAGS="-Wno-cpp -Wno-deprecated-declarations"
+cmake --build cmake_out/sf32lb52_devkit_lcd
+```
+
+产物：`cmake_out/sf32lb52_devkit_lcd/nuttx.bin`。
+
+> **坑（必读）**：改动 `configs/nsh/defconfig` 之后，必须
+> `rm -rf cmake_out/sf32lb52_devkit_lcd` 再重新配置。只重跑 cmake 会被已有的
+> `.config` 覆盖，新配置不生效。
+
+### 4. 烧录
+
+本仓 `firmware/nuttx.bin` 是已验证的镜像，**不构建也能直接烧录体验**
+（由 `apps` 提交 `3f7ee0d` + `vendor/sifli` 提交 `6ad7ca4` 构建）。
+
+```bash
+sftool -c SF32LB52 -m nor -p COM5 -b 1000000 \
+  --before default_reset --after soft_reset \
+  write_flash nuttx.bin@0x12010000
+```
+
+烧到 NOR 的 `0x12010000`（Windows 侧执行，COM5 = CH343 USB-UART）。
+
+> **坑（必读）**：只有**刚拔插过 USB** 时烧录才可靠——ROM bootloader 的 `ATSF32`
+> 监听窗口只有约 2 秒。否则会一直 `Failed to download stub: TimedOut`，
+> 换波特率或参数都没用。若日志出现 `nsh: ~ATSF32!~...: command not found`，
+> 说明 sftool 在跟运行中的 NuttX 说话、没进 ROM 模式，拔插 USB 后立刻烧即可。
+
+### 5. 运行
+
+串口终端 **1000000 8N1**，上电后：
+
+```text
+nsh> velapet
+```
+
+界面启动后即可体验完整闭环。演示构建会模拟步数增长（`CONFIG_EXAMPLES_VELAPET_DEMO_INPUT`），
+方便在没有计步器的板子上走完「步数 → 任务 → 经验 → 升级 → 换肤」。
+
+> 注意：`velapet` 是**前台内置命令**，运行期间 NSH 不响应控制台，这是正常行为，复位即可退出。
+
+### 6. 主机侧测试（可选，不需要硬件）
+
+```sh
+cd app/velapet
+CJ=<工作区>/apps/netutils/cjson/cJSON
+gcc -Wall -Wextra -Isrc -I"$CJ" \
+    tests/velapet_logic_test.c \
+    src/pet.c src/task.c src/reward.c src/json_utils.c src/storage.c \
+    "$CJ/cJSON.c" -lpthread -lm -o /tmp/velapet_logic_test
+/tmp/velapet_logic_test
+```
+
+`tests/velapet_date_test.c` 覆盖同一日期、隔天签到、时钟回跳。
 
 ---
-
-## 五、第四步：提交作品
-
-1. **fork** 你的专属仓 → 开发 → `git commit` 并推送 → 向专属仓发起 **Pull Request**，可**自行 review 并合入**（无需等组委会）。
-2. **AI Coding 日志**：与 AI 工具的对话会自动记录到本机 staging（不会自动上传），需你**主动导出/打包**选定会话到仓内 `logs/` 目录后一并提交。详见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
-3. 若需改动 **nuttx 等公共仓库**，不在本仓改，而是 fork 对应公共仓、以 PR 提交到 `dev-ai-contest-2026` 分支，由组委会 review 后合入。
-
-> ⏰ **提交作品截止：9 月 20 日**。截止后统一收回 push 权限，仍可查看 / clone。
->
-> 获奖后再按要求将作品 PR 至 openvela 上游对应仓库（走标准 PR + CI 流程）。
-
-### 关于 PR 与 CLA
-
-- 本仓所有改动通过 **Pull Request** 合入（分支保护强制，可自行合入自己的 PR）。
-- 首次贡献需在[**官网签署 CLA**](https://openvela.com/#/community/cla)；PR 上会自动跑 `cla/signature` 检查，在官网签署成功后，在 PR 评论 `/check-cla` 复检即可通过。
-
----
-
-## 六、提交前：把本 README 改成你的作品说明
-
-本文件目前是组委会给的**使用说明书**。**作品提交前，请把它替换成你自己作品的说明**，方便评委快速了解你做了什么、怎么跑起来。建议至少包含以下内容：
-
-```markdown
-# <你的作品名>
-
-## 一、作品简介
-<一句话/一段话说明这个作品是什么、解决什么问题、亮点在哪>
-
-## 二、选题方向
-<快应用 / 手表应用创新 ｜ AI 硬件产品创新 ｜ 新硬件适配 ｜ 自定方向，并简述理由>
-
-## 三、目录结构
-<列出你这个仓里各目录/文件的作用，例如：>
-- `app/xxx/`        — <说明>
-- `board/xxx/`      — <说明>
-- `quickapp/xxx/`   — <说明>
-- `logs/`           — AI Coding 日志
-- `docs/` 或其他    — <说明>
-
-## 四、运行方式
-<拉取工程后，如何编译、烧录/部署、运行的完整步骤；最好能让评委照着一步步复现>
 
 ## 五、AI Coding 使用说明
-<说明本作品如何借助 AI 辅助开发：
-- 在需求拆解 / 方案设计 / 编码 / 调试 / 文档等环节如何与 AI 协作；
-- AI 对开发效率或质量带来的实际帮助。
-完整对话日志见 logs/ 目录>
-```
 
-> 提示：将会根据「作品本身 + 你的 README 说明 + `logs/` 里的 AI Coding 日志」来理解和评估你的作品，README 写清楚很重要。
+本作品从需求拆解到真机调试全程使用 **Claude Code（CLI）** 辅助开发，AI 对话日志已导出到
+[`logs/kei-ds/`](logs/kei-ds/)（3 个会话、3554 个事件）。
 
----
+**各环节的协作方式**
 
-## 附：仓库命名规范
+| 环节 | 怎么做 |
+| --- | --- |
+| 需求拆解 / 方案设计 | 由我给出目标与约束（板子型号、无 RTC 电池、无计步器、`/data` 可用性未知），AI 提出模块划分与 ABI 设计，我确认或否决后再动手 |
+| 编码 | AI 按模块产出实现；业务核心与日期逻辑这类容易出错的边界（跨天、时钟回跳）由 AI 先写测试用例再写实现 |
+| 调试 | 真机串口日志贴给 AI 定位；构建配置不生效、NOR 写校验失败、文件系统格式化根因等都是这样查出来的 |
+| 文档 | 架构交接、数值设定、联调文档与 README 由 AI 起草、我核对事实 |
 
-`contest2026_<编号>_<队伍名>` — 编号三位零填充；队名 slug（全小写、英文/拼音、连字符）。例：`contest2026_084_AAAmengchongpifa`。
-（仓库由组委会统一创建，**每队仅一个仓**，无需自行命名。）
+**AI 带来的实际帮助**
+
+- 把「一个能跑的 LVGL 应用 + 一套端侧业务核心 + 一个 Python 后端」在**几天内**推到真机可用，
+  主要省在**样板代码**（CMake/Kconfig 接入、LVGL 页面骨架、cJSON 序列化）与**排查速度**上。
+- 整个开发过程被记录成 [`AI-开发日志.md`](AI-开发日志.md)，其中**失败与教训被刻意保留**
+  （构建配置陷阱、烧录时序、文件系统格式化的根因、蓝牙联网方案被证伪、前台命令占用控制台），
+  因为这些才是可复用的部分。
+- 过程中沉淀了两个可复用 Skill，放在 [`skills/`](skills/)：openvela 板级 bring-up 流程、
+  以及把应用接进 openvela/NuttX 构建体系的正确姿势。
+
+> 日志由官方 `contest-log-collector` 采集，未做任何内容修改；格式说明见
+> [`logs/README.md`](logs/README.md)。

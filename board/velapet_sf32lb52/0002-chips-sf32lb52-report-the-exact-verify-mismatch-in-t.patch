@@ -1,0 +1,87 @@
+From e384052456f0ce6df1fa8ab14d2b98b2d384b0ef Mon Sep 17 00:00:00 2001
+From: keids <keids@local>
+Date: Mon, 14 Sep 2026 12:43:50 +0800
+Subject: [PATCH 2/3] chips/sf32lb52: report the exact verify mismatch in the
+ NOR write path
+
+The write verify printed only the first eight bytes of the expected and
+read-back data.  When the mismatch is past byte 7 - which is what happens
+here - both sides look identical in the log and the message is actively
+misleading.
+
+Print the first differing offset with both values, plus the full 32-byte
+window from flash and from the source buffer, so a failure points at the
+byte that actually differs.
+
+Also document that SF32LB_NOR_PAGE_SIZE is the 4 KiB erase sector rather
+than the NOR page, and that MTDIOC_GEOMETRY reports it for both blocksize
+and erasesize on purpose: splitting them (blocksize=256, erasesize=4096)
+was tried and made littlefs hang during mount on hardware.
+---
+ chips/sf32lb52/sf32lb_flash.c | 42 ++++++++++++++++++++++++++++-------
+ 1 file changed, 34 insertions(+), 8 deletions(-)
+
+diff --git a/chips/sf32lb52/sf32lb_flash.c b/chips/sf32lb52/sf32lb_flash.c
+index a1f17e9..49f5494 100644
+--- a/chips/sf32lb52/sf32lb_flash.c
++++ b/chips/sf32lb52/sf32lb_flash.c
+@@ -40,6 +40,13 @@
+ #define SF32LB_NOR_ERASE_SIZE          QSPI_NOR_SECT_SIZE
+ #define SF32LB_NOR_PAGE_SHIFT          (12)
+ #define SF32LB_NOR_PAGE_SIZE           (1U << SF32LB_NOR_PAGE_SHIFT)
++
++/* NOTE: SF32LB_NOR_PAGE_SIZE is the erase sector size (4 KiB), not the NOR
++ * page, but MTDIOC_GEOMETRY deliberately reports it for blocksize as well.
++ * Splitting them (blocksize=256, erasesize=4096) was tried and made littlefs
++ * hang during mount on hardware, so the vendor geometry is kept as-is.  Any
++ * change here must be validated with a board that can still boot.
++ */
+ #define SF32LB_NOR_TOTAL_SIZE          (16U * 1024U * 1024U)
+ #define SF32LB_NOR_MIN_VALID_SIZE      (2U * 1024U * 1024U)
+ #define SF32LB_NOR_CLK_DIV             (2)
+@@ -447,15 +454,34 @@ static bool sf32lb_flash_verify_written(uint32_t addr,
+ 
+   if (memcmp(checkbuf, buffer, check_len) != 0)
+     {
++      uint32_t i = 0;
++      char flash_dump[3 * 32 + 1];
++      char want_dump[3 * 32 + 1];
++      int fpos = 0;
++      int wpos = 0;
++
++      while (i < check_len && checkbuf[i] == buffer[i])
++        {
++          i++;
++        }
++
++      for (uint32_t k = 0; k < check_len; k++)
++        {
++          fpos += snprintf(&flash_dump[fpos], sizeof(flash_dump) - fpos,
++                           "%02x", checkbuf[k]);
++          wpos += snprintf(&want_dump[wpos], sizeof(want_dump) - wpos,
++                           "%02x", buffer[k]);
++        }
++
+       syslog(LOG_ERR,
+-             "ERROR: verify mismatch at 0x%08lx: "
+-             "flash=%02x%02x%02x%02x%02x%02x%02x%02x "
+-             "expect=%02x%02x%02x%02x%02x%02x%02x%02x\n",
+-             (unsigned long)addr,
+-                  checkbuf[0], checkbuf[1], checkbuf[2], checkbuf[3],
+-                  checkbuf[4], checkbuf[5], checkbuf[6], checkbuf[7],
+-             buffer[0], buffer[1], buffer[2], buffer[3],
+-             buffer[4], buffer[5], buffer[6], buffer[7]);
++             "ERROR: verify mismatch at 0x%08lx size=%lu: first diff at +%lu "
++             "(flash=%02x want=%02x)\n"
++             "       flash=%s\n"
++             "       want =%s\n",
++             (unsigned long)addr, (unsigned long)size, (unsigned long)i,
++             i < check_len ? checkbuf[i] : 0,
++             i < check_len ? buffer[i] : 0,
++             flash_dump, want_dump);
+       return false;
+     }
+ 
+-- 
+2.34.1
+

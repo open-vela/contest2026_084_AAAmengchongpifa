@@ -1,0 +1,5 @@
+# apps/examples/velapet/Make.defs
+
+ifeq ($(CONFIG_EXAMPLES_VELAPET),y)
+CONFIGURED_APPS += $(APPDIR)/examples/velapet
+endif

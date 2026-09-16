@@ -1,0 +1,38 @@
+config EXAMPLES_VELAPET
+  tristate "VelaPet - AI pet for smartwatch"
+  default n
+  ---help---
+    Enable VelaPet application for smartwatch.
+
+if EXAMPLES_VELAPET
+
+config EXAMPLES_VELAPET_PROGNAME
+  string "Program name"
+  default "velapet"
+  ---help---
+    This is the name of the program that will be used when the NSH ELF program
+    is installed.
+
+config EXAMPLES_VELAPET_PRIORITY
+  int "VelaPet task priority"
+  default 100
+
+config EXAMPLES_VELAPET_STACKSIZE
+  int "VelaPet stack size"
+  default 32768
+
+config EXAMPLES_VELAPET_DEMO_INPUT
+  bool "Feed simulated steps so the growth loop can be demoed"
+  default y
+  ---help---
+    Adds steps automatically and on KEY2 presses so the task, reward, level
+    and skin-unlock loop can be demonstrated on a board with no real step
+    source.  Disable for a product build where step data comes from hardware.
+
+config VELAPET_DATA_PATH
+  string "Data storage path"
+  default "/data/agent/memory"
+  ---help---
+    Path where VelaPet stores pet_profile.json and task_log.json.
+
+endif

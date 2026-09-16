@@ -9,8 +9,14 @@
   <include name="openvela.xml"/>
 
   <project path="contest2026_084_AAAmengchongpifa" name="contest2026_084_AAAmengchongpifa">
-    <linkfile src="app/hello_app" dest="packages/demos/contest2026_084_hello_app"/>
-    <linkfile src="quickapp/hello_quickapp" dest="packages/apps/contest2026_084_hello_quickapp"/>
-    <linkfile src="board/contest_board" dest="vendor/openvela/boards/contest2026_084_board"/>
+    <!-- VelaPet, the smartwatch pet app.  Exposed to the openvela build tree
+         as a demos package so the apps auto-discovery finds its Kconfig /
+         CMakeLists without touching any production repo. -->
+    <linkfile src="app/velapet" dest="packages/demos/contest2026_084_velapet"/>
+
+    <!-- board/velapet_sf32lb52/ holds patches against the public
+         vendor/sifli repo rather than a buildable board directory, so it is
+         deliberately NOT linked into the build tree.  Application steps are
+         in board/velapet_sf32lb52/README.md. -->
   </project>
 </manifest>

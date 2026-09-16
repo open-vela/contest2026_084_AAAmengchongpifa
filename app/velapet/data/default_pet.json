@@ -1,0 +1,16 @@
+{
+  "name": "Vela",
+  "level": 1,
+  "exp": 0,
+  "exp_to_next": 100,
+  "current_skin": "default",
+  "personality": "cheerful",
+  "total_steps": 0,
+  "consecutive_days": 0,
+  "last_active": 0,
+  "last_task_refresh": 0,
+  "unlocked_skin_count": 1,
+  "unlocked_skins": [
+    "default"
+  ]
+}

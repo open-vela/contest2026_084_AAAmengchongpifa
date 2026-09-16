@@ -1,0 +1,4 @@
+# 本仓代码在 Windows 上编辑、在 Linux/WSL 中构建，必须禁用换行符自动转换：
+#   - Makefile 混入 CRLF 会直接导致构建失败；
+#   - board/ 下的 .patch 含二进制段，CRLF 会让 `git am` 失败。
+* -text
