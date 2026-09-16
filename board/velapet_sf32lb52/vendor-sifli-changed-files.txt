@@ -1,0 +1,5 @@
+boards/sf32lb52/sf32lb52_devkit_lcd/configs/nsh/defconfig
+boards/sf32lb52/sf32lb52_devkit_lcd/src/bsp_pinmux.c
+boards/sf32lb52/sf32lb52_devkit_lcd/src/etc/pet/home_pet.png
+boards/sf32lb52/sf32lb52_devkit_lcd/src/sifli_ap.c
+chips/sf32lb52/sf32lb_flash.c

@@ -1,0 +1,144 @@
+From 6ad7ca4f067d881b2c3ec397d185d968af1e42aa Mon Sep 17 00:00:00 2001
+From: keids <keids@local>
+Date: Mon, 14 Sep 2026 12:54:12 +0800
+Subject: [PATCH 3/3] boards/sf32lb52_devkit_lcd: seed the clock from the
+ firmware build time
+
+This board has no RTC backup battery, so after every power cycle the RTC
+reports its hardware default (observed: 2036-02-06) rather than the real
+time.  That is far enough from reality to break date-based logic: daily
+task refresh and check-in both compare dates.
+
+When the RTC differs from the firmware build time by more than a day, set
+the clock from __DATE__/__TIME__ through clock_settime(), which reaches the
+RTC through up_rtc_settime().  The tolerance is wide on purpose: a clock
+that is merely stale is left alone, so this does not fight an RTC that
+genuinely keeps time and a battery fitted later would survive it.
+
+This cannot make wall-clock time correct across power cycles - only a
+battery or network time can - but it keeps the displayed date sane and
+reproducible.
+---
+ .../sf32lb52_devkit_lcd/src/sifli_ap.c        | 90 +++++++++++++++++++
+ 1 file changed, 90 insertions(+)
+
+diff --git a/boards/sf32lb52/sf32lb52_devkit_lcd/src/sifli_ap.c b/boards/sf32lb52/sf32lb52_devkit_lcd/src/sifli_ap.c
+index c6bc87f..f672f12 100644
+--- a/boards/sf32lb52/sf32lb52_devkit_lcd/src/sifli_ap.c
++++ b/boards/sf32lb52/sf32lb52_devkit_lcd/src/sifli_ap.c
+@@ -27,8 +27,11 @@
+ 
+ #include <syslog.h>
+ #include <errno.h>
++#include <stdlib.h>
++#include <string.h>
+ #include <sys/mount.h>
+ #include <sys/stat.h>
++#include <time.h>
+ #include <debug.h>
+ 
+ #if defined(CONFIG_RTC) && defined(CONFIG_RTC_DRIVER)
+@@ -331,6 +334,88 @@ static int lcd_async_init_thread(int argc, FAR char *argv[])
+ }
+ #endif
+ 
++#if defined(CONFIG_RTC) && defined(CONFIG_RTC_DRIVER)
++/****************************************************************************
++ * Name: sf32lb52_build_time
++ *
++ * Description:
++ *   Return the time this firmware was compiled, parsed from the __DATE__ and
++ *   __TIME__ strings ("Mmm dd yyyy" and "hh:mm:ss").
++ *
++ ****************************************************************************/
++
++static time_t sf32lb52_build_time(void)
++{
++  static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
++  char month[4];
++  FAR const char *found;
++  struct tm tm;
++
++  month[0] = __DATE__[0];
++  month[1] = __DATE__[1];
++  month[2] = __DATE__[2];
++  month[3] = '\0';
++
++  found = strstr(months, month);
++
++  memset(&tm, 0, sizeof(tm));
++  tm.tm_mon   = found != NULL ? (int)((found - months) / 3) : 0;
++  tm.tm_mday  = atoi(&__DATE__[4]);
++  tm.tm_year  = atoi(&__DATE__[7]) - 1900;
++  tm.tm_hour  = atoi(&__TIME__[0]);
++  tm.tm_min   = atoi(&__TIME__[3]);
++  tm.tm_sec   = atoi(&__TIME__[6]);
++  tm.tm_isdst = -1;
++
++  return mktime(&tm);
++}
++
++/****************************************************************************
++ * Name: sf32lb52_seed_clock
++ *
++ * Description:
++ *   The DevKit-LCD has no RTC backup battery, so after a power cycle the RTC
++ *   reports its hardware default (observed: 2036-02-06) instead of the real
++ *   time.  Seed the clock from the firmware build time whenever the RTC looks
++ *   implausible, so the date on screen and the daily task logic have a sane,
++ *   reproducible base.
++ *
++ *   The tolerance is deliberately wide: a clock that is merely a little stale
++ *   is left alone, so this does not fight an RTC that genuinely keeps time
++ *   (and a battery added later would survive it).
++ *
++ ****************************************************************************/
++
++static void sf32lb52_seed_clock(void)
++{
++  time_t build = sf32lb52_build_time();
++  struct timespec now;
++  struct timespec want;
++
++  if (build <= 0 || clock_gettime(CLOCK_REALTIME, &now) < 0)
++    {
++      return;
++    }
++
++  if (now.tv_sec >= build - 86400 && now.tv_sec <= build + 86400)
++    {
++      return;
++    }
++
++  want.tv_sec = build;
++  want.tv_nsec = 0;
++
++  if (clock_settime(CLOCK_REALTIME, &want) < 0)
++    {
++      serr("WARN: seeding the clock from the build time failed: %d\n", errno);
++      return;
++    }
++
++  syslog(LOG_INFO,
++         "INFO: RTC had no usable time; set the clock to the build time\n");
++}
++#endif
++
+ /****************************************************************************
+  * Name: sf32lb52_lchspi_ulp_bringup
+  *
+@@ -390,6 +475,11 @@ int sf32lb52_lchspi_ulp_bringup(void)
+       serr("ERROR: rtc_initialize failed: %d\n", ret);
+       return ret;
+     }
++
++  /* No backup battery on this board: replace an implausible RTC value with
++   * the firmware build time. */
++
++  sf32lb52_seed_clock();
+ #endif
+ 
+ #ifdef CONFIG_ADC
+-- 
+2.34.1
+

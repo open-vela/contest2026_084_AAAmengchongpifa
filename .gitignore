@@ -1,0 +1,28 @@
+# ============================================================
+# 编译产物：不进仓（由 .gitignore.example 派生并补充）
+#
+# 注意：logs/ 下导出的 AI Coding 日志 **必须提交**，不要在此忽略。
+# ============================================================
+
+# Build artifacts
+build/
+out/
+cmake_out/
+*.o
+*.a
+*.elf
+*.hex
+*.map
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 本地密钥
+.env
+
+# 采集器运行期缓存（官方建议忽略）
+logs/.last_push
+logs/.cache
